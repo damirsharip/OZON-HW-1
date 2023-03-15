@@ -1,8 +1,8 @@
-.PHONY: run
+.PHONY: run build
 
 run:
-    go run cmd/bot/main.go
+	go run cmd/bot/main.go
 
 build:
-    go build -o bin/bot cmd/bot/main.go
+	go build -o bin/bot cmd/bot/main.go
     

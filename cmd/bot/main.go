@@ -1,24 +1,24 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-
-	"HW-1/config"
 	"HW-1/internal/commander"
+	"HW-1/internal/handlers"
 )
 
 func main() {
-	bot, err := tgbotapi.NewBotAPI(config.ApiKey)
+	fmt.Println("start main")
+	cmd, err := commander.Init()
 	if err != nil {
 		log.Panic(err)
 	}
 
-	cmd, err := commander.Init(bot)
-	if err != nil {
+	handlers.AddHandlers(cmd)
+
+	if err = cmd.Run(); err != nil {
 		log.Panic(err)
 	}
-	cmd.Run()
 
 }

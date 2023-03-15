@@ -2,60 +2,56 @@ package storage
 
 import (
 	"fmt"
+	"log"
+	"strconv"
+
+	"github.com/pkg/errors"
 )
 
-var lastId = uint(0)
+var data map[uint]*User
 
-type User struct {
-	id       uint
-	name     string
-	password string
+var UserExists = errors.New("user exists")
+var UserNotExist = errors.New("user does not exist")
+
+func init() {
+	log.Println("init storage")
+	data = make(map[uint]*User)
+	u, err := NewUser("name", "qwerty123")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	data[u.GetId()] = u
 }
 
-func NewUser(name, password string) (*User, error) {
-	u := User{}
-	err := u.SetName(name)
-	if err != nil {
-		return nil, err
+func List() []*User {
+	res := make([]*User, 0, len(data))
+	for _, v := range data {
+		res = append(res, v)
 	}
 
-	err = u.SetPassword(password)
-	if err != nil {
-		return nil, err
-	}
-	lastId++
-	u.id = lastId
-	return &u, nil
+	return res
 }
 
-func (u *User) SetName(name string) error {
-	if len(name) == 0 || len(name) > 10 {
-		return fmt.Errorf("bad name <%v>", name)
+func Add(u *User) error {
+	if _, ok := data[u.GetId()]; ok {
+		return errors.Wrap(UserExists, strconv.FormatUint(uint64(u.GetId()), 10))
 	}
-	u.name = name
+	data[u.GetId()] = u
 	return nil
 }
 
-func (u *User) SetPassword(pswd string) error {
-	if len(pswd) < 6 || len(pswd) > 10 {
-		return fmt.Errorf("bad password <%v>", pswd)
+func Update(u *User) error {
+	if _, ok := data[u.GetId()]; !ok {
+		return errors.Wrap(UserNotExist, strconv.FormatUint(uint64(u.GetId()), 10))
 	}
-	u.password = pswd
+	data[u.GetId()] = u
 	return nil
 }
 
-func (u User) String() string {
-	return fmt.Sprintf("%d: %s / %s", u.id, u.name, u.password)
-}
-
-func (u User) GetName() string {
-	return u.name
-}
-
-func (u User) GetPassword() string {
-	return u.password
-}
-
-func (u User) GetId() uint {
-	return u.id
+func Delete(id uint) error {
+	if _, ok := data[id]; !ok {
+		return errors.Wrap(UserNotExist, strconv.FormatUint(uint64(id), 10))
+	}
+	delete(data, id)
+	return nil
 }
