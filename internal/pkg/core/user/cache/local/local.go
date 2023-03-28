@@ -1,6 +1,8 @@
 package local
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 
 	cachePkg "HW-1/internal/pkg/core/user/cache"
@@ -19,10 +21,14 @@ func New() cachePkg.Interface {
 }
 
 type cache struct {
+	mu   sync.RWMutex
 	data map[string]models.User
 }
 
 func (c *cache) List() []models.User {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	result := make([]models.User, 0, len(c.data))
 	for _, value := range c.data {
 		result = append(result, value)
@@ -32,6 +38,9 @@ func (c *cache) List() []models.User {
 }
 
 func (c *cache) Add(u models.User) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if _, ok := c.data[u.Name]; ok {
 		return errors.Wrapf(ErrUserExists, "user-name: [%s]: ", u.Name)
 	}
@@ -40,6 +49,9 @@ func (c *cache) Add(u models.User) error {
 }
 
 func (c *cache) Update(u models.User) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if _, ok := c.data[u.Name]; !ok {
 		return errors.Wrapf(ErrUserNotExist, "user-name: [%s]: ", u.Name)
 	}
@@ -48,6 +60,9 @@ func (c *cache) Update(u models.User) error {
 }
 
 func (c *cache) Delete(name string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	
 	if _, ok := c.data[name]; !ok {
 		return errors.Wrapf(ErrUserNotExist, "user-name: [%s]: ", name)
 	}
