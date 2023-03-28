@@ -1,23 +1,35 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
-	"HW-1/internal/commander"
-	"HW-1/internal/handlers"
+	botPkg "HW-1/internal/pkg/bot"
+	cmdAddPkg "HW-1/internal/pkg/bot/command/add"
+	cmdHelpPkg "HW-1/internal/pkg/bot/command/help"
+	userPkg "HW-1/internal/pkg/core/user"
 )
 
 func main() {
-	fmt.Println("start main")
-	cmd, err := commander.Init()
-	if err != nil {
-		log.Panic(err)
+	var user userPkg.Interface
+	{
+		userPkg.New()
 	}
 
-	handlers.AddHandlers(cmd)
+	var bot botPkg.Interface
+	{
+		bot = botPkg.MustNew()
 
-	if err = cmd.Run(); err != nil {
+		commandAdd := cmdAddPkg.New(user)
+		bot.RegisterHandler(commandAdd)
+
+		commandHelp := cmdHelpPkg.New(map[string]string{
+			commandAdd.Name(): commandAdd.Description(),
+		})
+		bot.RegisterHandler(commandHelp)
+
+	}
+
+	if err := bot.Run(); err != nil {
 		log.Panic(err)
 	}
 

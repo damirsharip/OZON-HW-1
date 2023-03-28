@@ -1,46 +1,49 @@
-package commander
+package bot
 
 import (
 	"fmt"
 	"log"
 
 	"HW-1/config"
+	commandPkg "HW-1/internal/pkg/bot/command"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
 )
 
-type CmdHandler func(string) string
+type Interface interface {
+	Run() error
+	RegisterHandler(cmd commandPkg.Interface)
+}
 
 var route map[string]CmdHandler
 
-var UnknownCommand = errors.New("unknown command")
-
-type Commander struct {
-	bot   *tgbotapi.BotAPI
-	route map[string]CmdHandler
-}
-
-func Init() (*Commander, error) {
+func MustNew() Interface {
 	bot, err := tgbotapi.NewBotAPI(config.ApiKey)
 	if err != nil {
-		return nil, errors.Wrap(err, "init tgbot")
+		log.Panic(errors.Wrap(err, "init tgbot"))
 	}
 
 	bot.Debug = true
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
-	return &Commander{
+	return &сommander{
 		bot:   bot,
-		route: make(map[string]CmdHandler),
-	}, nil
+		route: make(map[string]commandPkg.Interface),
+	}
 }
 
-func (c *Commander) RegisterHandler(cmd string, f CmdHandler) {
-	c.route[cmd] = f
+type сommander struct {
+	bot   *tgbotapi.BotAPI
+	route map[string]commandPkg.Interface
 }
 
-func (c *Commander) Run() error {
+// RegisterHandler - not thread-safe
+func (c *сommander) RegisterHandler(cmd commandPkg.Interface) {
+	c.route[cmd.Name()] = cmd
+}
+
+func (c *сommander) Run() error {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 	updates := c.bot.GetUpdatesChan(u)
@@ -51,8 +54,8 @@ func (c *Commander) Run() error {
 		}
 
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
-		if cmd := update.Message.Command(); cmd != "" {
-			//switch cmd {
+		if cmdName := update.Message.Command(); cmdName != "" {
+			//switch cmdName {
 			//case listCmd:
 			//	msg.Text = listFunc()
 			//case addCmd:
@@ -66,8 +69,8 @@ func (c *Commander) Run() error {
 			//default:
 			//
 			//}
-			if f, ok := c.route[cmd]; ok {
-				msg.Text = f(update.Message.CommandArguments())
+			if cmd, ok := c.route[cmdName]; ok {
+				msg.Text = cmd.Process(update.Message.CommandArguments())
 			} else {
 				msg.Text = "unknown command"
 			}
